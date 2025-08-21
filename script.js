@@ -108,142 +108,176 @@ function changeDefender(imgId, nameId) {
 
 let availableAttackers = [...attackers];
 let availableDefenders = [...defenders];
+let currentSquad = [];
 
-fetch("squad.json")
-  .then((res) => res.json())
-  .then((data) => {
-    const container = document.getElementById("squadContainer");
-    container.innerHTML = "";
+// Function to load squad from JSON file
+function loadSquad(squadFile) {
+  return fetch(squadFile)
+    .then((res) => {
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      return res.json();
+    })
+    .then((data) => {
+      currentSquad = data.squad;
+      renderSquad();
+    })
+    .catch((error) => {
+      console.error("Error loading squad:", error);
+      alert(`Error loading squad: ${error.message}`);
+    });
+}
 
-    data.squad.forEach((member, index) => {
-      const card = document.createElement("div");
-      card.className = "card";
+// Function to render the squad
+function renderSquad() {
+  const container = document.getElementById("squadContainer");
+  container.innerHTML = "";
 
-      const attackerId = `randomAttacker-${index}`;
-      const attackerNameId = `attackerName-${index}`;
-      const defenderId = `randomDefender-${index}`;
-      const defenderNameId = `defenderName-${index}`;
+  // Reset operator pools
+  availableAttackers = [...attackers];
+  availableDefenders = [...defenders];
 
-      card.innerHTML = `
-        <h1>${member}</h1>
-        <div class="operator-section attacker">
-          <div class="badge attacker-badge">Attacker</div>
-          <img id="${attackerId}" class="operator-img" />
-          <h4 id="${attackerNameId}"></h4>
-          <button id="attackerBtn-${index}" class="refresh-btn">New Attacker</button>
-        </div>
+  currentSquad.forEach((member, index) => {
+    const card = document.createElement("div");
+    card.className = "card";
 
-        <div class="operator-section defender">
-          <div class="badge defender-badge">Defender</div>
-          <img id="${defenderId}" class="operator-img" />
-          <h4 id="${defenderNameId}"></h4>
-          <button id="defenderBtn-${index}" class="refresh-btn">New Defender</button>
-        </div>
-      `;
-      // Add toggle switch
-      const toggleContainer = document.createElement("div");
-      toggleContainer.className = "toggle-container";
-      toggleContainer.innerHTML = `
+    const attackerId = `randomAttacker-${index}`;
+    const attackerNameId = `attackerName-${index}`;
+    const defenderId = `randomDefender-${index}`;
+    const defenderNameId = `defenderName-${index}`;
+
+    card.innerHTML = `
+      <div class="toggle-container">
         <label class="switch">
           <input type="checkbox" id="switch-${index}" checked>
           <span class="slider round"></span>
         </label>
-        <span class="toggle-label">Include in randomizer</span>
-      `;
+        <span>Include in randomizer</span>
+      </div>
+      <h1>${member}</h1>
+      <div class="operator-section attacker">
+        <div class="badge attacker-badge">Attacker</div>
+        <img id="${attackerId}" class="operator-img" />
+        <h4 id="${attackerNameId}"></h4>
+        <button id="attackerBtn-${index}" class="refresh-btn">New Attacker</button>
+      </div>
+      <div class="operator-section defender">
+        <div class="badge defender-badge">Defender</div>
+        <img id="${defenderId}" class="operator-img" />
+        <h4 id="${defenderNameId}"></h4>
+        <button id="defenderBtn-${index}" class="refresh-btn">New Defender</button>
+      </div>
+    `;
 
-      card.appendChild(toggleContainer);
-      container.appendChild(card);
+    container.appendChild(card);
 
-      // Add event listener for the switch toggle
-      const switchInput = document.getElementById(`switch-${index}`);
-      const attackerSection = card.querySelector(".attacker");
-      const defenderSection = card.querySelector(".defender");
+    // Get references to the UI elements
+    const switchInput = document.getElementById(`switch-${index}`);
+    const attackerSection = card.querySelector(".attacker");
+    const defenderSection = card.querySelector(".defender");
 
-      switchInput.addEventListener("change", function () {
-        if (this.checked) {
-          attackerSection.style.display = "block";
-          defenderSection.style.display = "block";
-          // Reassign operators when toggling back on
+    // Initialize operators for this card
+    assignUniqueOperator(attackerId, attackerNameId, availableAttackers);
+    assignUniqueOperator(defenderId, defenderNameId, availableDefenders);
+
+    // Add event listeners
+    document
+      .getElementById(`attackerBtn-${index}`)
+      .addEventListener("click", () => {
+        if (switchInput.checked) {
+          putBackOperator(attackerId, availableAttackers);
           assignUniqueOperator(attackerId, attackerNameId, availableAttackers);
-          assignUniqueOperator(defenderId, defenderNameId, availableDefenders);
-        } else {
-          // Return operators to their pools when toggling off
-          const attackerImg = document.getElementById(attackerId);
-          const defenderImg = document.getElementById(defenderId);
-
-          if (attackerImg.src) {
-            availableAttackers.push(attackerImg.src);
-          }
-          if (defenderImg.src) {
-            availableDefenders.push(defenderImg.src);
-          }
-
-          attackerSection.style.display = "none";
-          defenderSection.style.display = "none";
         }
       });
 
-      // Store reference to the card's state
-      const toggle = toggleContainer.querySelector('input[type="checkbox"]');
-      card.dataset.isActive = "true";
-
-      // Toggle event listener
-      toggle.addEventListener("change", () => {
-        card.dataset.isActive = toggle.checked;
-      });
-
-      // Assign initial operator
-      assignUniqueOperator(attackerId, attackerNameId, availableAttackers);
-      assignUniqueOperator(defenderId, defenderNameId, availableDefenders);
-
-      // Add event listeners for independent refresh
-      document
-        .getElementById(`attackerBtn-${index}`)
-        .addEventListener("click", () => {
-          // put current back in pool
-          putBackOperator(attackerId, availableAttackers);
-          assignUniqueOperator(attackerId, attackerNameId, availableAttackers);
-        });
-
-      document
-        .getElementById(`defenderBtn-${index}`)
-        .addEventListener("click", () => {
+    document
+      .getElementById(`defenderBtn-${index}`)
+      .addEventListener("click", () => {
+        if (switchInput.checked) {
           putBackOperator(defenderId, availableDefenders);
           assignUniqueOperator(defenderId, defenderNameId, availableDefenders);
-        });
+        }
+      });
+
+    // Toggle switch event listener
+    switchInput.addEventListener("change", function () {
+      if (this.checked) {
+        attackerSection.style.display = "block";
+        defenderSection.style.display = "block";
+        // Reassign operators when toggling back on
+        assignUniqueOperator(attackerId, attackerNameId, availableAttackers);
+        assignUniqueOperator(defenderId, defenderNameId, availableDefenders);
+      } else {
+        // Return operators to their pools when toggling off
+        const attackerImg = document.getElementById(attackerId);
+        const defenderImg = document.getElementById(defenderId);
+
+        if (attackerImg && attackerImg.src) {
+          availableAttackers.push(attackerImg.src);
+        }
+        if (defenderImg && defenderImg.src) {
+          availableDefenders.push(defenderImg.src);
+        }
+
+        attackerSection.style.display = "none";
+        defenderSection.style.display = "none";
+      }
     });
   });
+}
 
-// Add event listener for the refresh all button
-document.getElementById('changeAllBtn').addEventListener('click', function() {
-  // Get all cards
-  const cards = document.querySelectorAll('.card');
-  
-  // Clear and refill the pools
-  availableAttackers = [...attackers];
-  availableDefenders = [...defenders];
-  
-  // Refresh each active card
-  cards.forEach((card, index) => {
-    if (card.dataset.isActive === 'true') {
-      const attackerId = `randomAttacker-${index}`;
-      const attackerNameId = `attackerName-${index}`;
-      const defenderId = `randomDefender-${index}`;
-      const defenderNameId = `defenderName-${index}`;
-      
-      // Get current operators to put them back in the pool
-      const currentAttacker = document.getElementById(attackerId).src;
-      const currentDefender = document.getElementById(defenderId).src;
-      
-      // Remove current operators from pools if they exist
-      availableAttackers = availableAttackers.filter(op => op !== currentAttacker);
-      availableDefenders = availableDefenders.filter(op => op !== currentDefender);
-      
-      // Assign new operators
-      assignUniqueOperator(attackerId, attackerNameId, availableAttackers);
-      assignUniqueOperator(defenderId, defenderNameId, availableDefenders);
-    }
-  });
+// Initialize the application
+window.addEventListener("DOMContentLoaded", () => {
+  // Add event listener for squad selection
+  const squadSelector = document.getElementById("squadSelector");
+  if (squadSelector) {
+    // Set default selected squad to Squad 2 (squad1.json)
+    squadSelector.value = "squad.json";
+
+    squadSelector.addEventListener("change", function () {
+      loadSquad(this.value);
+    });
+  }
+
+  // Load initial squad (Squad 2 by default)
+  loadSquad("squad.json");
+
+  // Add event listener for the refresh all button
+  document
+    .getElementById("changeAllBtn")
+    ?.addEventListener("click", function () {
+      // Reset operator pools
+      availableAttackers = [...attackers];
+      availableDefenders = [...defenders];
+
+      // Change all operators for the current squad
+      currentSquad.forEach((_, index) => {
+        const attackerId = `randomAttacker-${index}`;
+        const attackerNameId = `attackerName-${index}`;
+        const defenderId = `randomDefender-${index}`;
+        const defenderNameId = `defenderName-${index}`;
+
+        // Check if the toggle is enabled for this member
+        const toggle = document.getElementById(`switch-${index}`);
+        if (!toggle || toggle.checked) {
+          // Put current operators back in the pool
+          const attackerImg = document.getElementById(attackerId);
+          const defenderImg = document.getElementById(defenderId);
+
+          if (attackerImg && attackerImg.src) {
+            availableAttackers.push(attackerImg.src);
+          }
+          if (defenderImg && defenderImg.src) {
+            availableDefenders.push(defenderImg.src);
+          }
+
+          // Assign new operators
+          assignUniqueOperator(attackerId, attackerNameId, availableAttackers);
+          assignUniqueOperator(defenderId, defenderNameId, availableDefenders);
+        }
+      });
+    });
 });
 
 // Helper to assign unique operator
