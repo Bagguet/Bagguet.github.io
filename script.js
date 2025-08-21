@@ -170,14 +170,14 @@ fetch("squad.json")
           // Return operators to their pools when toggling off
           const attackerImg = document.getElementById(attackerId);
           const defenderImg = document.getElementById(defenderId);
-          
+
           if (attackerImg.src) {
             availableAttackers.push(attackerImg.src);
           }
           if (defenderImg.src) {
             availableDefenders.push(defenderImg.src);
           }
-          
+
           attackerSection.style.display = "none";
           defenderSection.style.display = "none";
         }
@@ -213,6 +213,38 @@ fetch("squad.json")
         });
     });
   });
+
+// Add event listener for the refresh all button
+document.getElementById('changeAllBtn').addEventListener('click', function() {
+  // Get all cards
+  const cards = document.querySelectorAll('.card');
+  
+  // Clear and refill the pools
+  availableAttackers = [...attackers];
+  availableDefenders = [...defenders];
+  
+  // Refresh each active card
+  cards.forEach((card, index) => {
+    if (card.dataset.isActive === 'true') {
+      const attackerId = `randomAttacker-${index}`;
+      const attackerNameId = `attackerName-${index}`;
+      const defenderId = `randomDefender-${index}`;
+      const defenderNameId = `defenderName-${index}`;
+      
+      // Get current operators to put them back in the pool
+      const currentAttacker = document.getElementById(attackerId).src;
+      const currentDefender = document.getElementById(defenderId).src;
+      
+      // Remove current operators from pools if they exist
+      availableAttackers = availableAttackers.filter(op => op !== currentAttacker);
+      availableDefenders = availableDefenders.filter(op => op !== currentDefender);
+      
+      // Assign new operators
+      assignUniqueOperator(attackerId, attackerNameId, availableAttackers);
+      assignUniqueOperator(defenderId, defenderNameId, availableDefenders);
+    }
+  });
+});
 
 // Helper to assign unique operator
 function assignUniqueOperator(imgId, nameId, pool) {
