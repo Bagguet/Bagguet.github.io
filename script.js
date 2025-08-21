@@ -140,8 +140,57 @@ fetch("squad.json")
           <button id="defenderBtn-${index}" class="refresh-btn">New Defender</button>
         </div>
       `;
+      // Add toggle switch
+      const toggleContainer = document.createElement("div");
+      toggleContainer.className = "toggle-container";
+      toggleContainer.innerHTML = `
+        <label class="switch">
+          <input type="checkbox" id="switch-${index}" checked>
+          <span class="slider round"></span>
+        </label>
+        <span class="toggle-label">Include in randomizer</span>
+      `;
 
+      card.appendChild(toggleContainer);
       container.appendChild(card);
+
+      // Add event listener for the switch toggle
+      const switchInput = document.getElementById(`switch-${index}`);
+      const attackerSection = card.querySelector(".attacker");
+      const defenderSection = card.querySelector(".defender");
+
+      switchInput.addEventListener("change", function () {
+        if (this.checked) {
+          attackerSection.style.display = "block";
+          defenderSection.style.display = "block";
+          // Reassign operators when toggling back on
+          assignUniqueOperator(attackerId, attackerNameId, availableAttackers);
+          assignUniqueOperator(defenderId, defenderNameId, availableDefenders);
+        } else {
+          // Return operators to their pools when toggling off
+          const attackerImg = document.getElementById(attackerId);
+          const defenderImg = document.getElementById(defenderId);
+          
+          if (attackerImg.src) {
+            availableAttackers.push(attackerImg.src);
+          }
+          if (defenderImg.src) {
+            availableDefenders.push(defenderImg.src);
+          }
+          
+          attackerSection.style.display = "none";
+          defenderSection.style.display = "none";
+        }
+      });
+
+      // Store reference to the card's state
+      const toggle = toggleContainer.querySelector('input[type="checkbox"]');
+      card.dataset.isActive = "true";
+
+      // Toggle event listener
+      toggle.addEventListener("change", () => {
+        card.dataset.isActive = toggle.checked;
+      });
 
       // Assign initial operator
       assignUniqueOperator(attackerId, attackerNameId, availableAttackers);
